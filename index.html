@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>iOS plist generator</title>
+    <link rel="stylesheet" href="index.css">
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>iOS plist generator</h1>
+      </header>
+      <form id="generatePlistForm">
+      <section class="main">
+
+        <div class="form-field">
+          <label>
+            Display Name: <small>(Should be no more than 12 letters)</small>
+            <input id="bundleName" name="name" type="text" placeholder="e.g. App Name" required>
+          </label>
+        </div>
+
+        <div class="form-field">
+          <label>
+            URL of the <strong>.ipa</strong> file: <small>(Must be HTTPS)</small>
+            <input id="bundleURL" name="url" type="text" placeholder="e.g. https://example.com/coolapp.ipa" required>
+          </label>
+        </div>
+
+        <div class="form-field">
+          <label>
+            Bundle Identifier:
+            <input id="bundleIdentifier" name="identifier" type="text" placeholder="e.g. com.example.coolapp" required>
+          </label>
+        </div>
+
+        <div class="form-field">
+          <label>
+            Bundle Version:
+            <input id="bundleVersion" name="version" type="text" placeholder="e.g. 123456789" required>
+          </label>
+        </div>
+      </section>
+      <footer><button type="submit" id="generatePlistButton" class="btn">Save plist</button></footer>
+      </form>
+    </div>
+    <script id="plistTemplate" type="text/x-handlebars-template"><?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>assets</key>
+			<array>
+				<dict>
+					<key>kind</key>
+					<string>software-package</string>
+					<key>url</key>
+					<string>{{{url}}}</string>
+				</dict>
+			</array>
+			<key>metadata</key>
+			<dict>
+				<key>bundle-identifier</key>
+				<string>{{identifier}}</string>
+				<key>bundle-version</key>
+				<string>{{version}}</string>
+				<key>kind</key>
+				<string>software</string>
+				<key>title</key>
+				<string>{{name}}</string>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>
+    </script>
+
+    <script>
+      var ipc = require('ipc');
+      var mustache = require('./mustache.min.js');
+
+      var plistTemplate = document.getElementById('plistTemplate').innerHTML;
+      var renderedPlist = "";
+      var generatePlistButton = document.getElementById('generatePlistButton')
+
+      var bundleName = document.getElementById('bundleName');
+      var bundleURL = document.getElementById('bundleURL');
+      var bundleIdentifier = document.getElementById('bundleIdentifier');
+      var bundleVersion = document.getElementById('bundleVersion');
+
+      var bundle = {
+        name: "",
+        url: "",
+        identifier: "",
+        version: ""
+      };
+
+      function submitGeneratePlistForm( event ) {
+        if(validateForm()){
+          updatePlist();
+          ipc.send('generate-plist', renderedPlist);
+
+          resetBundle();
+        }
+
+        event.preventDefault();
+        return false;
+      }
+
+      function updateBundleItem(){
+        bundle[this.getAttribute("name")] = this.value;
+      }
+
+      function validateForm(){
+        if(
+          bundleName.value == "" ||
+          bundleURL.value == "" ||
+          bundleIdentifier.value == "" ||
+          bundleVersion.value == ""
+        ) {
+          return false;
+        }
+        return true;
+      }
+
+      function updatePlist(){
+        renderedPlist = mustache.render(plistTemplate, bundle);
+      }
+
+      function resetBundle(){
+        bundle = {
+          name: "",
+          url: "",
+          identifier: "",
+          version: ""
+        };
+
+        bundleName.value = "";
+        bundleURL.value = "";
+        bundleIdentifier.value = "";
+        bundleVersion.value = "";
+      }
+
+      bundleName.addEventListener("keyup", updateBundleItem);
+      bundleURL.addEventListener("keyup", updateBundleItem);
+      bundleIdentifier.addEventListener("keyup", updateBundleItem);
+      bundleVersion.addEventListener("keyup", updateBundleItem);
+
+      generatePlistForm.addEventListener("submit", submitGeneratePlistForm);
+
+    </script>
+  </body>
+</html>
